@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -7,11 +7,15 @@ using UnityEngine;
 
 public class WebSocketReceiver : MonoBehaviour
 {
-    private string wsUrl = "ws://192.168.163.152/ws"; // Cambia esto a la IP real
-    public Transform targetObject;
+    private float timeLapse = 0f;
+    private string wsUrl = "ws://mi-esp.local/ws"; //direccion privada del esp
+
+    public Transform targetObject; //Game object del modelo de la mano
     
     private ClientWebSocket ws;
     private CancellationTokenSource cancelSource;
+
+    Quaternion smoothQ;
 
     private async void Start()
     {
@@ -23,7 +27,7 @@ public class WebSocketReceiver : MonoBehaviour
     {
         while (!cancelSource.Token.IsCancellationRequested)
         {
-            try
+            try //intenta una conexion mediante web socket con el esp
             {
                 ws = new ClientWebSocket();
                 Debug.Log("Conectando a WebSocket...");
@@ -37,8 +41,8 @@ public class WebSocketReceiver : MonoBehaviour
                 Debug.LogError("WebSocket error: " + e.Message);
             }
 
-            Debug.Log("Reconectando en 3 segundos...");
-            await Task.Delay(5);
+            Debug.Log("Reconectando en 3 segundos..."); //si falla, espera 3 segundos
+            await Task.Delay(300);
         }
     }
 
@@ -46,10 +50,10 @@ public class WebSocketReceiver : MonoBehaviour
     {
         byte[] buffer = new byte[1024*8];
 
-        while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
+        while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)//mientras la comunicacion se mantenga y no hayan instucciones para cerrarla
         {
             WebSocketReceiveResult result = null;
-            try
+            try//se guarda en result un arreglo 'ArraySegment' de bytes del tamano buffer 
             {
                 result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), token);
             }
@@ -59,19 +63,19 @@ public class WebSocketReceiver : MonoBehaviour
                 break; // Se sale del bucle y se reconecta
             }
 
-            if (result == null || result.MessageType == WebSocketMessageType.Close)
+            if (result == null || result.MessageType == WebSocketMessageType.Close)//si result es nulo o se ha mandado una peticion para cerrar la comunicacion, se rompe el ciclo
             {
                 Debug.LogWarning("Conexión cerrada por el servidor.");
                 break;
             }
 
             string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            try
+            try//message convierte el binario ArraySegment en texto
             {
-                Quaternion q = ParseQuaternion(message);
+                Quaternion q = ParseQuaternion(message);//llama a un metodo para parsear el json message a quaterniones para unity, luego lo guarda en el Quaternion q
                 UnityMainThreadDispatcher.Instance().Enqueue(() => {
-                    if (targetObject != null)
-                        targetObject.localRotation = Quaternion.Slerp(targetObject.localRotation,q,60);
+                    if (targetObject != null)//si existe la referencia para el gameobject de la mano, se le aplica la rotacion q
+                        targetObject.localRotation = q;
                 });
             }
             catch (Exception e)
