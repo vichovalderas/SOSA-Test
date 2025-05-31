@@ -5,6 +5,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <Ticker.h>
+#include <ESPmDNS.h>
 
 
 AsyncWebServer server(80);
@@ -12,9 +13,9 @@ AsyncWebSocket ws("/ws");
 bool wsStarted = false;
 
 // Red WiFi
-const char* ssid = "X";
-const char* password = "X";
 
+const char* ssid = "X";//WIFI NAME
+const char* password = "X";//WIFI PASS
 
 unsigned long lastWiFiCheck = 0;
 const unsigned long wifiCheckInterval = 3000;
@@ -60,7 +61,7 @@ void checkWiFiConnection() {
 
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("\nReconectado. IP: " + WiFi.localIP().toString());
-      wsStarted = false;  // ← reinicia el WebSocket en la siguiente vuelta
+      wsStarted = false;  // reinicia el WebSocket en la siguiente vuelta
     } else {
       Serial.println("\nNo se pudo reconectar.");
     }
@@ -84,13 +85,13 @@ void readMPUQuat() {
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(21, 20);
+  Wire.begin(21, 20); //INIT PIN I2C
 
   // Inicializar MPU6050
   mpu.initialize();
   devStatus = mpu.dmpInitialize();
 
-  if (devStatus == 0) {
+  if (devStatus == 0) { //INIT DMP
     Serial.println("DMP inicializado correctamente.");
     mpu.setDMPEnabled(true);
     dmpReady = true;
@@ -102,7 +103,7 @@ void setup() {
 
   // WiFi inicial
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED) {//INIT WIFI
     delay(300);
     Serial.print(".");
   }
@@ -114,12 +115,18 @@ void setup() {
 
   // Ticker de lectura de sensor
   readTicker.attach_ms(100, readMPUQuat);
+
+    WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); }
+
+  if (!MDNS.begin("mi-esp")) {//INIT DNS, se muestra en la red privada como ws://mi-esp.local/ws
+    Serial.println("Error iniciando mDNS");
+    return;
+  }
+  Serial.println("mDNS iniciado: mi-esp.local");
 }
 
-int msg=0;
-
 void loop() {
-  //int size = sizeof(quatBuffer);
   // Verificación periódica de Wi-Fi
   if (millis() - lastWiFiCheck > wifiCheckInterval) {
     lastWiFiCheck = millis();
@@ -133,16 +140,11 @@ void loop() {
 
   //ws.cleanupClients();
 
-  if (newQuatReady && ws.count() > 0) {
+  if (newQuatReady && ws.count() > 0) { //Si hay clientes conectados, es decir ws.count() > 0, se envia quatBuffer a ws://mi-esp.local/ws
     Serial.println(quatBuffer);
     ws.textAll(quatBuffer);
     newQuatReady = false;
-    msg++;
-  }else {
-    Serial.print("Com terminated. Messages:");
-    Serial.println(msg);
-    //Serial.println("Bytes: "+size);
-    }
+  }
 
   delay(30);
 }
