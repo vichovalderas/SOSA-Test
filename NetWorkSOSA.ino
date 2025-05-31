@@ -12,10 +12,9 @@ AsyncWebSocket ws("/ws");
 bool wsStarted = false;
 
 // Red WiFi
-const char* ssid = "hotSpot";
-const char* password = "redmipass";
-/*const char* ssid = "VALDERAS";
-const char* password = "10203040";*/
+const char* ssid = "X";
+const char* password = "X";
+
 
 unsigned long lastWiFiCheck = 0;
 const unsigned long wifiCheckInterval = 3000;
