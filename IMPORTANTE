@@ -1,0 +1,12 @@
+Controller.cs va en un gameObject vacio, tiene una variable Target Object, esta referencia al gameObject de la mano y se asigna manualmente
+NetWorkSOSA.ino es el codigo a compilar en el ESP32-S3
+KeepCenteredOnCamera.cs se asigna al gameObject de la mano, el codigo se encarga de que la posicion del objeto este centrada en la camara
+
+IMPORTANTE: 
+*Se tiene que crear un boton (primero se crea un Canvas, luego dentro del mismo, se crea un boton -> UI/Button-TextMeshPro
+*Este boton tiene el componente button, tiene una funcion OnClick en el inspector, a este se le agrega:
+  -> El gameObject con el script Controller.cs
+  -> Donde dice 'No function', se le asigna WebSocketReceiver/SendCalibrationRequest;
+*Este boton, cuando es cliqueado llama a SendCalibrationRequest() dentro de controller.cs, 
+ manda una peticion al ESP para calibrar el sensor, resetea su posicion en pantalla y se toma como marco de referencia.
+
